@@ -7,7 +7,8 @@ public class Main {
 	
 	public Main() {
 		frame = new Frame("Graphics Spike");
-		panel = new Diagram();
+		panel = new Diagram(1.125f);
+		panel.setGridlines(true, new Dimension(6));
 	}
 	
 	public void launch() {

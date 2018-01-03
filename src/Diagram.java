@@ -1,88 +1,161 @@
-import java.awt.*;
-import javax.swing.*;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.NoninvertibleTransformException;
+import java.awt.geom.Point2D;
 
 public class Diagram extends Component {
-	// ALL UNITS IN INCHES
-	private float width, height; // inches wide and high
+	// The user space will be scaled and translated.
+	private AffineTransform transform;
 	
-	public Diagram() {
-		this.width = 200;
-		this.height = 200;
-	}
+	// Dimensions that do not normally change
+	private Dimension rampWidth = new Dimension(40);
+	private Dimension postSize = new Dimension(4);
 	
-	/**
-	 * Calculate an x coordinate/size in pixels, given an inch measurement.
-	 * @param coord
-	 * @return
-	 */
-	private int getXCoord(double coord) {
-		// factor = how many pixels an inch is
-		double factor = this.getWidth() / (double)this.width;
-		return (int) (coord * factor);
-	}
+	// Gridlines
+	private boolean gridlines;
+	private Dimension gridSize;
 	
-	private int getYCoord(double coord) {
-		double factor = this.getHeight() / (double)this.height;
-		return (int) (coord * factor);
-	}
+	private Dimension maxWidth, maxHeight;
 	
-	/**
-	 * Draws a post with its top-left corner at the given point. 
-	 * @param g
-	 */
-	private void drawPost(Graphics2D g, Point p) {
-		// 4x4 inches
-		g.fillRect(this.getXCoord(p.getX()), this.getYCoord(p.getY()), this.getXCoord(4), this.getYCoord(4));
-	}
+	private Point2D panOrigin;
 	
-	/**
-	 * Draws a ramp section.
-	 * @param g 
-	 * @param p Top-left corner
- 	 * @param length Length in inches
- 	 * @param orientation Orientation; 0 for vertical, 1 for horizontal.
-	 */
-	private void drawRampSection(Graphics2D g, Point p, int length, int orientation) {
-		int width = getXCoord(40);
-		int height = getYCoord(length); 
-		int x = getXCoord(p.getX());
-		int y = getYCoord(p.getY());
+	// Scale = eights of inch to pixel
+	// Each unit used in drawing will be an eighth of an inch. This can be scaled up.
+	public Diagram(float scale) {
+		this.transform = new AffineTransform();
+		this.transform.setToScale(scale, scale);
+		this.panOrigin = new Point2D.Double(0, 0);
 		
+		// Grid size
+		this.gridSize = new Dimension(6); // 6"
+		this.maxWidth = new Dimension(30, 0, 0); // 30'
+		this.maxHeight = new Dimension(30, 0, 0);
+		
+		// Add mouse listener
+		this.addMouseWheelListener(new MouseAdapter() {
+			@Override
+			public void mouseWheelMoved(MouseWheelEvent e) {
+				double delta = 0.125d * e.getPreciseWheelRotation();
+				setScale(transform.getScaleX() + delta);
+				revalidate();
+				repaint();
+			}
+		});
+		
+		this.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mousePressed(MouseEvent e) {
+//				panOrigin.setLocation(e.getX(), e.getY());
+//				System.out.println(panOrigin);
+			}
+		});
+		
+		this.addMouseMotionListener(new MouseAdapter() {
+			@Override
+			public void mouseDragged(MouseEvent e) {
+				//AffineTransform inverted = (AffineTransform) transform.clone();
+				
+				try {
+					//inverted.invert();
+					//Point2D point = inverted.transform(new Point2D.Double(e.getX(), e.getY()), null);
+					//inverted.setToTranslation((double)e.getX(), (double)e.getY());
+					Point2D p = transform.inverseTransform(new Point2D.Double(e.getX() - panOrigin.getX(), e.getY() - panOrigin.getY()), null);
+					transform.translate(p.getX(), p.getY());
+					revalidate();
+					repaint();
+					panOrigin.setLocation(e.getX(), e.getY());
+					System.out.printf("%f, %f\n", p.getX(), p.getY());
+				} catch (NoninvertibleTransformException e1) {
+					e1.printStackTrace();
+				}
+			}
+		});
+	}
+	
+	public void setGridSize(Dimension gridSize) {
+		this.gridSize = gridSize;
+		revalidate();
+		repaint();
+	}
+	
+	public void setGridlines(boolean gridlines, Dimension gridSize) {
+		this.gridlines = gridlines;
+		this.setGridSize(gridSize);
+	}
+	
+	public Dimension getGridSize() {
+		return this.gridSize;
+	}
+	
+	public boolean hasGridlines() {
+		return this.gridlines;
+	}
+	
+	// Sets the scale of the diagram and truncates it to the scale unit.
+	public void setScale(double scale) {
+		double tx = this.transform.getTranslateX();
+		double ty = this.transform.getTranslateY();
+		this.transform.setToScale(scale, scale);
+		this.transform.translate(tx, ty);
+	}
+	
+	public void drawPost(Graphics2D g, Dimension x, Dimension y) {
+		g.fillRect(x.toEighths(), y.toEighths(), this.postSize.toEighths(), this.postSize.toEighths());
+	}
+	
+	// Vertical = 0
+	// Horizontal = 1
+	public void drawRampSection(Graphics2D g, Dimension x, Dimension y, Dimension length, int orientation) {
 		// Flip'em if the orientation is horizontal.
-		if (orientation == 1) {
-			g.drawRect(getXCoord(p.getX()), getYCoord(p.getY()), height, width);
+		if (orientation == 0) {
+			//g.drawRect(x, y, length, this.rampWidth);
+			g.drawRect(x.toEighths(), y.toEighths(), this.rampWidth.toEighths(), length.toEighths());
 		} else {
-			g.drawRect(getXCoord(p.getX()), getYCoord(p.getY()), width, height);
+			//g.drawRect(x, y, this.rampWidth, length);
+			g.drawRect(x.toEighths(), y.toEighths(), length.toEighths(), this.rampWidth.toEighths());
+		}
+	}
+	
+	public void drawTurnaround() {
+		
+	}
+	
+	public void drawLabel() {
+		
+	}
+	
+	public void drawGridlines(Graphics2D g, Color color, Dimension gridSize) {
+		int verticals = (int) Math.floor(this.maxWidth.divideBy(gridSize)); 
+		int horizontals = (int) Math.floor(this.maxHeight.divideBy(gridSize));
+		
+		g.setColor(Color.LIGHT_GRAY);
+		for (int x = 0; x < verticals; x++) {
+			int xPos = x * gridSize.toEighths();
+			g.drawLine(xPos, 0, xPos, this.maxHeight.toEighths());
 		}
 		
-		this.drawPost(g, new Point((int)p.getX() - 4, (int)p.getY()));
-		this.drawPost(g, new Point((int)p.getX() + 40, (int)p.getY()));
-	}
-	
-	/**
-	 * Draws a turn-around
-	 * @param g
-	 * @param p top-left corner
-	 * @param size width and height in inches
-	 */
-	private void drawTurnAround(Graphics2D g, Point p, float size) {
-		
-	}
-	
-	/**
-	 * Draws text
-	 * @param g
-	 * @param p location
-	 */
-	private void drawLabel(Graphics2D g) {
-		
+		for (int y = 0; y < horizontals; y++) {
+			int yPos = y * gridSize.toEighths();
+			g.drawLine(0, yPos, this.maxWidth.toEighths(), yPos);
+		}
 	}
 	
 	public void paint(Graphics graphics) {
 		Graphics2D g = (Graphics2D) graphics;
+		g.setTransform(this.transform);
 		
-		g.setColor(Color.black);
-		this.drawRampSection(g, new Point(24, 20), 12 * 8, 0);
+		if (this.gridlines) {
+			this.drawGridlines(g, Color.LIGHT_GRAY, this.gridSize);
+		}
 		
+		g.setColor(Color.BLACK);
+		this.drawPost(g, new Dimension(20), new Dimension(20));
+		this.drawRampSection(g, new Dimension(24), new Dimension(20), new Dimension(120), 0); // 10ft
 	}
 }
