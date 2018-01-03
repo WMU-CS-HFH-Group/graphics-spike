@@ -2,13 +2,13 @@ import java.awt.*;
 import javax.swing.*;
 
 public class Main {
-	private Frame frame;
+	private JFrame frame;
 	private Diagram panel;
 	
 	public Main() {
-		frame = new Frame("Graphics Spike");
-		panel = new Diagram(1.125f);
-		panel.setGridlines(true, new Dimension(6));
+		frame = new JFrame("Graphics Spike");
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		panel = new Diagram();
 	}
 	
 	public void launch() {

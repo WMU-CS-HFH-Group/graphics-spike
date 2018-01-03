@@ -1,108 +1,105 @@
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseWheelEvent;
-import java.awt.geom.AffineTransform;
-import java.awt.geom.NoninvertibleTransformException;
-import java.awt.geom.Point2D;
+import java.awt.*;
+import java.awt.event.*;
+import java.util.List;
+import java.util.ArrayList;
 
 public class Diagram extends Component {
-	// The user space will be scaled and translated.
-	private AffineTransform transform;
+	// Transformation variables
+	private double scale;
+	private int translationX, translationY;
+	private Point panOrigin;
+	private Point lastTranslation;
 	
-	// Dimensions that do not normally change
-	private Dimension rampWidth = new Dimension(40);
-	private Dimension postSize = new Dimension(4);
+	// Transformation limits
+	private double minScale = 0.1;
+	private double maxScale = 3.0;
 	
-	// Gridlines
-	private boolean gridlines;
-	private Dimension gridSize;
+	// Grid sizes
+	private List<Dimension> grids;
 	
+	// Preset grid sizes
+	public static final Dimension YD_GRID = new Dimension(36.0f);
+	public static final Dimension FT_GRID = new Dimension(12.0f);
+	public static final Dimension SIX_IN_GRID = new Dimension(6.0f);
+	public static final Dimension IN_GRID = new Dimension(1.0f);
+	
+	// Page Specifications
 	private Dimension maxWidth, maxHeight;
 	
-	private Point2D panOrigin;
+	// Common dimensions
+	private Dimension rampWidth = new Dimension(40.0f);
+	private Dimension postSize = new Dimension(4.0f);
 	
-	// Scale = eights of inch to pixel
-	// Each unit used in drawing will be an eighth of an inch. This can be scaled up.
-	public Diagram(float scale) {
-		this.transform = new AffineTransform();
-		this.transform.setToScale(scale, scale);
-		this.panOrigin = new Point2D.Double(0, 0);
+	public Diagram() {
+		// Transformation
+		this.scale = 1.0;
+		this.translationX = 0;
+		this.translationY = 0;
+		this.panOrigin = new Point(0, 0);
+		this.lastTranslation = new Point(0, 0);
 		
-		// Grid size
-		this.gridSize = new Dimension(6); // 6"
-		this.maxWidth = new Dimension(30, 0, 0); // 30'
-		this.maxHeight = new Dimension(30, 0, 0);
+		// Grids
+		this.grids = new ArrayList<Dimension>();
 		
-		// Add mouse listener
+		// Default grid
+		this.addGrid(Diagram.FT_GRID);
+		
+		// Page Specifications
+		this.maxWidth = new Dimension(50, 0, 0);
+		this.maxHeight = new Dimension(50, 0, 0);
+		
+		// Event for zooming
 		this.addMouseWheelListener(new MouseAdapter() {
 			@Override
 			public void mouseWheelMoved(MouseWheelEvent e) {
-				double delta = 0.125d * e.getPreciseWheelRotation();
-				setScale(transform.getScaleX() + delta);
-				revalidate();
-				repaint();
+				double delta = 0.05 * e.getPreciseWheelRotation();
+				if (scale + delta <= maxScale && scale + delta >= minScale) {
+					scale += delta;
+					revalidate();
+					repaint();
+				}
 			}
 		});
 		
+		// Events for panning
 		this.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mousePressed(MouseEvent e) {
-//				panOrigin.setLocation(e.getX(), e.getY());
-//				System.out.println(panOrigin);
+				panOrigin.setLocation(e.getX(), e.getY());
+				lastTranslation.setLocation(translationX, translationY);
 			}
 		});
 		
 		this.addMouseMotionListener(new MouseAdapter() {
 			@Override
 			public void mouseDragged(MouseEvent e) {
-				//AffineTransform inverted = (AffineTransform) transform.clone();
-				
-				try {
-					//inverted.invert();
-					//Point2D point = inverted.transform(new Point2D.Double(e.getX(), e.getY()), null);
-					//inverted.setToTranslation((double)e.getX(), (double)e.getY());
-					Point2D p = transform.inverseTransform(new Point2D.Double(e.getX() - panOrigin.getX(), e.getY() - panOrigin.getY()), null);
-					transform.translate(p.getX(), p.getY());
-					revalidate();
-					repaint();
-					panOrigin.setLocation(e.getX(), e.getY());
-					System.out.printf("%f, %f\n", p.getX(), p.getY());
-				} catch (NoninvertibleTransformException e1) {
-					e1.printStackTrace();
-				}
+				translationX = (int) lastTranslation.getX() + e.getX() - (int) panOrigin.getX();
+				translationY = (int) lastTranslation.getY() + e.getY() - (int) panOrigin.getY();
+				revalidate();
+				repaint();
 			}
 		});
 	}
 	
-	public void setGridSize(Dimension gridSize) {
-		this.gridSize = gridSize;
+	public void resetTranslation() {
+		this.translationX = 0;
+		this.translationY = 0;
 		revalidate();
 		repaint();
 	}
 	
-	public void setGridlines(boolean gridlines, Dimension gridSize) {
-		this.gridlines = gridlines;
-		this.setGridSize(gridSize);
+	public void resetScale() {
+		this.scale = 1.0;
+		revalidate();
+		repaint();
 	}
 	
-	public Dimension getGridSize() {
-		return this.gridSize;
+	public void addGrid(Dimension grid) {
+		this.grids.add(grid);
 	}
 	
-	public boolean hasGridlines() {
-		return this.gridlines;
-	}
-	
-	// Sets the scale of the diagram and truncates it to the scale unit.
-	public void setScale(double scale) {
-		double tx = this.transform.getTranslateX();
-		double ty = this.transform.getTranslateY();
-		this.transform.setToScale(scale, scale);
-		this.transform.translate(tx, ty);
+	public void removeGrid(Dimension grid) {
+		this.grids.remove(grid);
 	}
 	
 	public void drawPost(Graphics2D g, Dimension x, Dimension y) {
@@ -122,36 +119,29 @@ public class Diagram extends Component {
 		}
 	}
 	
-	public void drawTurnaround() {
-		
-	}
-	
-	public void drawLabel() {
-		
-	}
-	
-	public void drawGridlines(Graphics2D g, Color color, Dimension gridSize) {
-		int verticals = (int) Math.floor(this.maxWidth.divideBy(gridSize)); 
-		int horizontals = (int) Math.floor(this.maxHeight.divideBy(gridSize));
-		
-		g.setColor(Color.LIGHT_GRAY);
-		for (int x = 0; x < verticals; x++) {
-			int xPos = x * gridSize.toEighths();
-			g.drawLine(xPos, 0, xPos, this.maxHeight.toEighths());
-		}
-		
-		for (int y = 0; y < horizontals; y++) {
-			int yPos = y * gridSize.toEighths();
-			g.drawLine(0, yPos, this.maxWidth.toEighths(), yPos);
-		}
-	}
-	
 	public void paint(Graphics graphics) {
 		Graphics2D g = (Graphics2D) graphics;
-		g.setTransform(this.transform);
 		
-		if (this.gridlines) {
-			this.drawGridlines(g, Color.LIGHT_GRAY, this.gridSize);
+		// Make transformations
+		g.getTransform().setToIdentity();
+		g.translate(this.translationX, this.translationY);
+		g.scale(this.scale, this.scale);
+		
+		// Draw grids
+		for (Dimension gridSize : this.grids) {
+			int verticals = (int) Math.floor(this.maxWidth.divideBy(gridSize)); 
+			int horizontals = (int) Math.floor(this.maxHeight.divideBy(gridSize));
+			
+			g.setColor(Color.LIGHT_GRAY);
+			for (int x = 0; x < verticals; x++) {
+				int xPos = x * gridSize.toEighths();
+				g.drawLine(xPos, 0, xPos, this.maxHeight.toEighths());
+			}
+			
+			for (int y = 0; y < horizontals; y++) {
+				int yPos = y * gridSize.toEighths();
+				g.drawLine(0, yPos, this.maxWidth.toEighths(), yPos);
+			}
 		}
 		
 		g.setColor(Color.BLACK);
