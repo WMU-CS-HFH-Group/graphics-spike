@@ -103,22 +103,22 @@ public class Dimension implements Comparable<Dimension> {
 			// Display the inches part of the measurement if it is nonzero.
 			if (this.inches > 0) {
 				result += String.format("%d", this.inches);
-			}
-
-			// Display the fractional part of the measurement if it is nonzero.
-			if (this.eighths > 0) {
-				if (this.eighths % 4 == 0) {
-					// If it can be reduced to halves, display halves.
-					result += String.format(" %d/2\"", this.eighths / 4);
-				} else if (this.eighths % 2 == 0) {
-					// If it can be reduced to fourths, display fourths.
-					result += String.format(" %d/4\"", this.eighths / 2);
+				
+				// Display the fractional part of the measurement if it is nonzero.
+				if (this.eighths > 0) {
+					if (this.eighths % 4 == 0) {
+						// If it can be reduced to halves, display halves.
+						result += String.format(" %d/2\"", this.eighths / 4);
+					} else if (this.eighths % 2 == 0) {
+						// If it can be reduced to fourths, display fourths.
+						result += String.format(" %d/4\"", this.eighths / 2);
+					} else {
+						// If it cannot be reduced, display eighths.
+						result += String.format(" %d/8\"", this.eighths);
+					}
 				} else {
-					// If it cannot be reduced, display eighths.
-					result += String.format(" %d/8\"", this.eighths);
+					result += "\"";
 				}
-			} else {
-				result += "\"";
 			}
 		}
 
@@ -132,6 +132,10 @@ public class Dimension implements Comparable<Dimension> {
 
 		// If the difference is negative, return -1, and vice-versa.
 		return (int) (difference / Math.abs(difference));
+	}
+	
+	public Dimension scale(float scalar) {
+		return new Dimension(this.toInches() * scalar);
 	}
 	
 	// Divides the dimension by another dimension.

@@ -9,6 +9,7 @@ import java.awt.geom.AffineTransform;
 import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Point2D;
 
+@Deprecated
 public class Diagram2 extends Component {
 	// The user space will be scaled and translated.
 	private AffineTransform transform;

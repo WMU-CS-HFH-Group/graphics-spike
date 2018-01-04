@@ -15,13 +15,7 @@ public class Diagram extends Component {
 	private double maxScale = 3.0;
 	
 	// Grid sizes
-	private List<Dimension> grids;
-	
-	// Preset grid sizes
-	public static final Dimension YD_GRID = new Dimension(36.0f);
-	public static final Dimension FT_GRID = new Dimension(12.0f);
-	public static final Dimension SIX_IN_GRID = new Dimension(6.0f);
-	public static final Dimension IN_GRID = new Dimension(1.0f);
+	private List<Grid> grids;
 	
 	// Page Specifications
 	private Dimension maxWidth, maxHeight;
@@ -39,10 +33,16 @@ public class Diagram extends Component {
 		this.lastTranslation = new Point(0, 0);
 		
 		// Grids
-		this.grids = new ArrayList<Dimension>();
+		this.grids = new ArrayList<Grid>();
 		
 		// Default grid
-		this.addGrid(Diagram.FT_GRID);
+		Grid ftGrid = Grid.createFeetGrid();
+		ftGrid.setDisplayLabels(true);
+		ftGrid.setLabelInterval(3);
+		Grid inGrid = Grid.createInchesGrid();
+		
+		this.addGrid(ftGrid);
+		this.addGrid(inGrid);
 		
 		// Page Specifications
 		this.maxWidth = new Dimension(50, 0, 0);
@@ -94,11 +94,11 @@ public class Diagram extends Component {
 		repaint();
 	}
 	
-	public void addGrid(Dimension grid) {
+	public void addGrid(Grid grid) {
 		this.grids.add(grid);
 	}
 	
-	public void removeGrid(Dimension grid) {
+	public void removeGrid(Grid grid) {
 		this.grids.remove(grid);
 	}
 	
@@ -128,19 +128,43 @@ public class Diagram extends Component {
 		g.scale(this.scale, this.scale);
 		
 		// Draw grids
-		for (Dimension gridSize : this.grids) {
-			int verticals = (int) Math.floor(this.maxWidth.divideBy(gridSize)); 
-			int horizontals = (int) Math.floor(this.maxHeight.divideBy(gridSize));
-			
-			g.setColor(Color.LIGHT_GRAY);
-			for (int x = 0; x < verticals; x++) {
-				int xPos = x * gridSize.toEighths();
-				g.drawLine(xPos, 0, xPos, this.maxHeight.toEighths());
-			}
-			
-			for (int y = 0; y < horizontals; y++) {
-				int yPos = y * gridSize.toEighths();
-				g.drawLine(0, yPos, this.maxWidth.toEighths(), yPos);
+		for (Grid grid : this.grids) {
+			// Determine whether the grid should be drawn from the scale.
+			if (this.scale > grid.getDisappearAtScale()) {
+				// Calculate the number of gridlines.
+				int verticals = (int) Math.floor(this.maxWidth.divideBy(grid.getSize())); 
+				int horizontals = (int) Math.floor(this.maxHeight.divideBy(grid.getSize()));
+				
+				// Set the state of the graphics object.
+				g.setStroke(new BasicStroke(grid.getThickness()));
+				g.setFont(new Font("Arial", Font.PLAIN, 20));
+				
+				// Draw all the gridlines.
+				for (int x = 0; x < verticals; x++) {
+					int xPos = x * grid.getSize().toEighths();
+					g.setColor(grid.getColor());
+					g.drawLine(xPos, 0, xPos, this.maxHeight.toEighths());
+					
+					// Draw labels on the top and side if required.
+					if (grid.isDisplayLabels() && x % grid.getLabelInterval() == 0) {
+						g.setColor(Color.DARK_GRAY);
+						g.drawString(grid.getSize().scale((float) x).toString(), xPos, 0);
+					}
+				}
+				
+				for (int y = 0; y < horizontals; y++) {
+					int yPos = y * grid.getSize().toEighths();
+					g.setColor(grid.getColor());
+					g.drawLine(0, yPos, this.maxWidth.toEighths(), yPos);
+					
+					// Draw labels on the top and side if required.
+					if (grid.isDisplayLabels() && y % grid.getLabelInterval() == 0) {
+						g.setColor(Color.DARK_GRAY);
+						g.drawString(grid.getSize().scale((float) y).toString(), 0, yPos);
+					}
+				}
+				
+				
 			}
 		}
 		
