@@ -23,6 +23,8 @@ public class Diagram extends Component {
 	// Common dimensions
 	private Dimension rampWidth = new Dimension(40.0f);
 	private Dimension postSize = new Dimension(4.0f);
+	private Dimension turnaroundSize = new Dimension(4, 0, 0);
+	private Dimension landingSize = new Dimension(6, 0, 0);
 	
 	public Diagram() {
 		// Transformation
@@ -117,6 +119,14 @@ public class Diagram extends Component {
 			//g.drawRect(x, y, this.rampWidth, length);
 			g.drawRect(x.toEighths(), y.toEighths(), length.toEighths(), this.rampWidth.toEighths());
 		}
+	}
+	
+	public void drawTurnaround(Graphics2D g, Dimension x, Dimension y, Dimension width, Dimension height) {
+		g.drawRect(x.toEighths(), y.toEighths(), this.turnaroundSize.toEighths(), this.turnaroundSize.toEighths());
+	}
+	
+	public void drawLanding(Graphics2D g, Dimension x, Dimension y) {
+		g.drawRect(x.toEighths(), y.toEighths(), this.landingSize.toEighths(), this.landingSize.toEighths());
 	}
 	
 	public void paint(Graphics graphics) {

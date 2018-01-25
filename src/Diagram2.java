@@ -127,6 +127,10 @@ public class Diagram2 extends Component {
 		
 	}
 	
+	public void drawLanding() {
+		
+	}
+	
 	public void drawLabel() {
 		
 	}
